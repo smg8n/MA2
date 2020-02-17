@@ -1,4 +1,3 @@
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -103,6 +102,7 @@ int main(int argc, char *argv[])
 
 int prime(int num)
 {
+	int biggest;
 	int i, j, isPrime;
 
 	if(num <= 1)
@@ -122,6 +122,10 @@ int prime(int num)
 			}	
 		}
 	
+		if(isPrime)
+		{
+			biggest = i;
+		}
 	}
-	return isPrime ;
+	return biggest;
 }

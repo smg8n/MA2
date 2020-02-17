@@ -1,16 +1,23 @@
-CC = gcc
-CFLAGS = -w
-TARGET = oss
-OBJ = main.o 
-OBJ = prime.o 
-SRC = main.c 
-SRC1 = prime.c
-all: $(TARGET) 
-$(TARGET):$(OBJ)
-	$(CC) -o $(TARGET) $(OBJ)
-$(OBJ): $(SRC)
-	$(CC) $(CFLAGS) -c $(SRC)
-$(OBJ1): $(SRC)
-	$(CC) $(CFLAGS) -c $(SRC1)
+MASTER		= oss
+WORKER		= prime
+MASTER_OBJ	= oss.o
+WORKER_OBJ	= prime.o
+TARGETS		= $(MASTER) $(WORKER)
+
+.SUFFIXES: .c .o
+
+all: $(TARGETS)
+
+$(MASTER): $(MASTER_OBJ)
+	gcc -Wall -g -o $@ $(MASTER_OBJ)
+
+$(WORKER): $(WORKER_OBJ)
+	gcc -Wall -g -o $@ $(WORKER_OBJ)
+
+.c.o:
+	gcc -Wall -g -c $<
+
+.PHONY: clean
 clean:
-	/bin/rm -f *.o $(TARGET)
+	/bin/rm -f $(TARGETS) *.o
+
