@@ -104,7 +104,7 @@ int prime(int num)
 {
 	int biggest;
 	int i, j, isPrime;
-
+	biggest = num;
 	if(num <= 1)
 	{
 		return -1;
@@ -124,7 +124,7 @@ int prime(int num)
 	
 		if(isPrime)
 		{
-			biggest = i;
+			biggest = num;
 		}
 	}
 	return biggest;
