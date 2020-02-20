@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 	
-	printf("[oss] number is %d\n", n);
+	printf("[oss] number of processes are %d\n", n);
 	
 	printf("[oss] getting shared memory\n");
 	int shmid = shmget(SHM_KEY, sizeof(int), 0666 | IPC_CREAT); // get shared memory id
