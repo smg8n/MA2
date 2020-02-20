@@ -61,6 +61,7 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	
 	//Print out given number
 	printf("%s (parent): your given number is: %d\n", argv[0], number);
 	
