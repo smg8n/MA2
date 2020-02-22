@@ -5,7 +5,7 @@ TARGET2 = oss
 OBJS1 = user.o
 OBJS2 = oss.o
 
-all: prime oss
+all: user oss
 $(TARGET1): $(OBJS1)
 		$(CC) -o $(TARGET1) $(OBJS1)
 $(TARGET2): $(OBJS2)
