@@ -8,6 +8,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <signal.h>
+#include <setjmp.h>
 
 #define SHMKEY 	123456
 #define BUFF_SIZE sizeof(int)
@@ -17,7 +19,21 @@ struct Clock{
     int nanoseconds;
     long totaltimecomsumed;
 };
+/*Function handles ctrl c signal */
+void ctrlCHandler(){
+    char errorArr[200];
+    snprintf(errorArr, 200, "\n\nCTRL+C signal caught, killing all processes and releasing shared memory.");
+    perror(errorArr);
 
+}
+
+/*Function handles timer alarm signal */
+void timerHandler(){
+    char errorArr[200];
+    snprintf(errorArr, 200, "\n\ntimer interrupt triggered, killing all processes and releasing shared memory.");
+    perror(errorArr);
+
+}
 int main(int argc, char* argv[]){
     int options= 0;		// Placeholder for arguments
     int maxchilderns = 4;	// Max total number of child processes oss wil create.
@@ -25,6 +41,16 @@ int main(int argc, char* argv[]){
     int pnumber = 0;	// The start of numbers to be tested for primality
     int incrementnumber = 0;	// Increment between the numbers we test
     char outputfile[255] = "output.log";	// Output file
+
+    /*Catch ctrl+c signal and handle with
+    *      * ctrlChandler*/
+    signal(SIGINT, ctrlCHandler);
+
+    /*Catch alarm handle with timer Handler*/
+    signal (SIGALRM, timerHandler);
+
+    jmp_buf ctrlCjmp;
+    jmp_buf timerjmp;
 
     while((options = getopt(argc, argv, "hn:s:b:i:o:")) != -1)
         switch(options){
@@ -99,6 +125,17 @@ int main(int argc, char* argv[]){
     char* paddress = (char*)(shmat(shmid, 0, 0));
     int* ptime = (int*)(paddress);
 
+    /*Jump back to main enviroment where children are launched
+*      * but before the wait*/
+    if(setjmp(ctrlCjmp) == 1){
+            kill(pid, SIGKILL);
+        }
+
+    if(setjmp(timerjmp) == 1){
+            kill(pid, SIGKILL);
+        }
+
+
     while(childfinish <= maxchilderns && exitcount < maxchilderns){
         *ptime = timer.totaltimecomsumed;
         timer.nanoseconds += 1;
@@ -119,8 +156,10 @@ int main(int argc, char* argv[]){
                 char convertpid[15];
                 sprintf(convertednumber, "%d", primenumberarray[childfinish]);
                 sprintf(convertpid, "%d", getpid());
-                char *args[] = {"./user", convertednumber, convertpid, NULL};
+                char *args[] = {"./prime", convertednumber, convertpid, NULL};
                 execvp(args[0], args);
+
+
             }
             fprintf(fn, "Child with PID %d and number %d has launched at time %d seconds and %d nanoseconds\n", pid, primenumberarray[childfinish], timer.seconds, timer.nanoseconds);
             childfinish++;
