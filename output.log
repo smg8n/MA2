@@ -1,0 +1,24 @@
+Child with PID 3991 and number 101 has launched at time 0 seconds and 1 nanoseconds
+Child with PID 3992 and number 105 has launched at time 0 seconds and 2 nanoseconds
+Child with PID:3991 has been terminated after 0 seconds and 1583 nanoseconds
+Child with PID 3993 and number 109 has launched at time 0 seconds and 1584 nanoseconds
+Child with PID:3992 has been terminated after 0 seconds and 1584 nanoseconds
+Child with PID 3994 and number 113 has launched at time 0 seconds and 1585 nanoseconds
+Child with PID:3993 has been terminated after 0 seconds and 2873 nanoseconds
+Child with PID 3995 and number 117 has launched at time 0 seconds and 2874 nanoseconds
+Child with PID:3994 has been terminated after 0 seconds and 3084 nanoseconds
+Child with PID 3996 and number 121 has launched at time 0 seconds and 3085 nanoseconds
+Child with PID:3995 has been terminated after 0 seconds and 4361 nanoseconds
+Child with PID 3997 and number 125 has launched at time 0 seconds and 4362 nanoseconds
+Child with PID:3996 has been terminated after 0 seconds and 4620 nanoseconds
+Child with PID 3998 and number 129 has launched at time 0 seconds and 4621 nanoseconds
+Child with PID:3997 has been terminated after 0 seconds and 5876 nanoseconds
+Child with PID 3999 and number 133 has launched at time 0 seconds and 5877 nanoseconds
+Child with PID:3998 has been terminated after 0 seconds and 6214 nanoseconds
+Child with PID 4000 and number 137 has launched at time 0 seconds and 6215 nanoseconds
+Child with PID:3999 has been terminated after 0 seconds and 7305 nanoseconds
+Child with PID:4000 has been terminated after 0 seconds and 7932 nanoseconds
+The prime numbers are: 
+101 109 113 137 
+non prime numbers are: 
+-105 -117 -121 -125 -129 -133 
