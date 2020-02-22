@@ -1,48 +1,15 @@
-# merugu.2
 
 INTRODUCTION
 ------------
 
-Problem: In  this  project  you  will  have  two  executable  files.   The  first  executable  file,oss,  
-will  be  in  charge  of launching a specific number of child processes at various times using afork followed by an exec. 
-oss should then keep  track  of  how  many  children  have  finished  executing  and  terminate  itself  only  when  
-all  of  its  children  have finished.When you runoss, it should take in several command line options.  
-First, -h, to describe how it should be run.  Thena -n x option to indicate the maximum total of child processes it will ever create.  Another option, -s, will indicatehow many children should be allowed to exist in the system at the same time.  
-I suggest the default being of a -n of 4and a -s of 2.  
-Additional options are -b to indicate the start of the sequence of numbers we are to test for primality,a -i option for the increment between numbers that we test and finally a -o option specifying an output file.  
-Notethat all of these arguments should have some sensible default values, which should be described if -h is given
-
- * For a full description of the module, visit th
-   e project page of CS4760: Operating Systems at:
-   http://www.cs.umsl.edu/~sanjiv/classes/cs4760/
-
- * To submit bug reports and feature suggestions o
-   r track changes visit:
-   https://github.com/smg8n
-
-
-REQUIREMENTS
-------------
-
-This module requires the following:
-
- * Hoare Linux (http://www.umsl.edu/technology/tsc/)
- * UMSL ID (https://www.umsl.edu/degrees/index.html)
-
-
-INSTALLATION
-------------
-
- * Install as you would normally install a distrib
-   uted C module. To compile and execute, you must
-   have the build-essential packages properly inst
-   alled on your system. 
+The goal of this homework is to become familiar with using shared memory and creating multiple processes. In this
+project we will be using multiple processes to determine if a set of numbers are prime or not.
 
 
 COMPILATION
 -----------
 
-To compile, open a new CLI window, change the the
+To compile, open a new CLI window, change the 
 directory nesting your module. Type:
 
  * make
@@ -50,23 +17,27 @@ directory nesting your module. Type:
 
 EXECUTION
 ---------
-																								 
-Find the executable named bt, located inside that
-directory in which you compiled the module. After
-you have found bt, invoke the program with:
+	
+Find the executable named oss, located inside that
+directory in which you compiled the module.
+To run it simply type:
+  ./oss -b 101 -i 4
 
- * oss [-h] [n:s:b:i:o:h] 
+To run command line arguments:
+  ./oss [-h] [-n  -s  -b  -i -o ] 
  
- * The options are to be interpreted as follows:
- 
- -h             Describe how the project should be run and then, terminate
- -n x           Indicate the maximum total of child processes oss will ever create. (Default 4)
- -s x           Indicate the number of children allowed to exist in the system at the same time. (Default 2)
--b B           Start of the sequence of numbers to be tested for primality
- -i I           Increment between numbers that we test
- -o filename    Output file
+  * h Print a help message and exit.											
+  * n This program will detect if numbers within a set are prime using child processes(Default 4)
+  * s x Indicate the number of children allowed to exist in the system at the same time. (Default 2)
+  * b B Start of the sequence of numbers to be tested for primality
+  * i I Increment between numbers that we test
+  * o filename Output file
 
-MAINTAINERS
------------
+If no arguments provided, it will it will compute 0 primality.
 
-Current maintainers: https://github.com/smg8n
+Version Control
+----------------------
+For Version Control i have used github.
+
+README.txt
+Displaying README.txt.
