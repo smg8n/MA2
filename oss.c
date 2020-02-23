@@ -142,7 +142,7 @@ int main(int argc, char* argv[]){
                 char convertpid[15];
                 sprintf(convertednumber, "%d", primenumberarray[childfinish]);
                 sprintf(convertpid, "%d", getpid());
-                char *args[] = {"./prime", convertednumber, convertpid, NULL};
+                char *args[] = {"./user", convertednumber, convertpid, NULL};
                 execvp(args[0], args);
 
 
