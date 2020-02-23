@@ -147,14 +147,14 @@ int main(int argc, char* argv[]){
 
 
             }
-            fprintf(fn, "Child %d with PID %d and number %d has launched at time %d seconds and %d nanoseconds\n", activechild ,pid, primenumberarray[childfinish], timer.seconds, timer.nanoseconds);
+            fprintf(fn, "Child with PID %d and number %d has launched at time %d seconds and %d nanoseconds\n" ,pid, primenumberarray[childfinish], timer.seconds, timer.nanoseconds);
             childfinish++;
             activechild++;
         }
         if((pid = waitpid((pid_t)-1, &status, WNOHANG)) > 0){
             if(WIFEXITED(status)){
                 int exitStatus = WEXITSTATUS(status);
-                fprintf(fn, "Child %d with PID:%d has been terminated after %d seconds and %d nanoseconds\n", exitcount,pid, timer.seconds, timer.nanoseconds);
+                fprintf(fn, "Child with PID:%d has been terminated after %d seconds and %d nanoseconds\n",pid, timer.seconds, timer.nanoseconds);
                 if(exitStatus == 0){
                     primes[pcount] = primenumberarray[exitcount];
                     pcount++;
