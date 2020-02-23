@@ -189,6 +189,7 @@ int main(int argc, char* argv[]){
     for(i = 0; i < npcount; i++){
         fprintf(fn, "%d ", -noprimes[i]);
     }
+    fprintf(fn, "\nfinished at time %f seconds \n", timer.nanoseconds/1000000000.0);
     fclose(fn);
 
     return 0;
