@@ -24,6 +24,7 @@ void ctrlCHandler(){
     char errorArr[200];
     snprintf(errorArr, 200, "\n\nCTRL+C signal caught, killing all processes and releasing shared memory.");
     perror(errorArr);
+    exit(0);
 
 }
 
@@ -32,6 +33,8 @@ void timerHandler(){
     char errorArr[200];
     snprintf(errorArr, 200, "\n\ntimer interrupt triggered, killing all processes and releasing shared memory.");
     perror(errorArr);
+    exit(0);
+
 
 }
 int main(int argc, char* argv[]){
@@ -42,15 +45,6 @@ int main(int argc, char* argv[]){
     int incrementnumber = 0;	// Increment between the numbers we test
     char outputfile[255] = "output.log";	// Output file
 
-    /*Catch ctrl+c signal and handle with
-    *      * ctrlChandler*/
-    signal(SIGINT, ctrlCHandler);
-
-    /*Catch alarm handle with timer Handler*/
-    signal (SIGALRM, timerHandler);
-
-    jmp_buf ctrlCjmp;
-    jmp_buf timerjmp;
 
     while((options = getopt(argc, argv, "hn:s:b:i:o:")) != -1)
         switch(options){
@@ -125,18 +119,10 @@ int main(int argc, char* argv[]){
     char* paddress = (char*)(shmat(shmid, 0, 0));
     int* ptime = (int*)(paddress);
 
-    /*Jump back to main enviroment where children are launched
-*      * but before the wait*/
-    if(setjmp(ctrlCjmp) == 1){
-            kill(pid, SIGKILL);
-        }
-
-    if(setjmp(timerjmp) == 1){
-            kill(pid, SIGKILL);
-        }
 
 
     while(childfinish <= maxchilderns && exitcount < maxchilderns){
+        int j=1;
         *ptime = timer.totaltimecomsumed;
         timer.nanoseconds += 1;
         timer.totaltimecomsumed += 1;
@@ -161,14 +147,14 @@ int main(int argc, char* argv[]){
 
 
             }
-            fprintf(fn, "Child with PID %d and number %d has launched at time %d seconds and %d nanoseconds\n", pid, primenumberarray[childfinish], timer.seconds, timer.nanoseconds);
+            fprintf(fn, "Child %d with PID %d and number %d has launched at time %d seconds and %d nanoseconds\n", activechild ,pid, primenumberarray[childfinish], timer.seconds, timer.nanoseconds);
             childfinish++;
             activechild++;
         }
         if((pid = waitpid((pid_t)-1, &status, WNOHANG)) > 0){
             if(WIFEXITED(status)){
                 int exitStatus = WEXITSTATUS(status);
-                fprintf(fn, "Child with PID:%d has been terminated after %d seconds and %d nanoseconds\n", pid, timer.seconds, timer.nanoseconds);
+                fprintf(fn, "Child %d with PID:%d has been terminated after %d seconds and %d nanoseconds\n", exitcount,pid, timer.seconds, timer.nanoseconds);
                 if(exitStatus == 0){
                     primes[pcount] = primenumberarray[exitcount];
                     pcount++;
@@ -189,8 +175,27 @@ int main(int argc, char* argv[]){
     for(i = 0; i < npcount; i++){
         fprintf(fn, "%d ", -noprimes[i]);
     }
-    fprintf(fn, "\nfinished at time %f seconds \n", timer.nanoseconds/1000000000.0);
+    fprintf(fn, "\nfinished at time %f seconds \n",  timer.nanoseconds/1000000000.0);
+
     fclose(fn);
+    /*Catch ctrl+c signal and handle with
+    *      * ctrlChandler*/
+    signal(SIGINT, ctrlCHandler);
+
+    /*Catch alarm handle with timer Handler*/
+    signal (SIGALRM, timerHandler);
+
+    jmp_buf ctrlCjmp;
+    jmp_buf timerjmp;
+    /*Jump back to main enviroment where children are launched
+*      * but before the wait*/
+    if(setjmp(ctrlCjmp) == 1){
+        kill(pid, SIGKILL);
+    }
+
+    if(setjmp(timerjmp) == 1){
+        kill(pid, SIGKILL);
+    }
 
     return 0;
 }
