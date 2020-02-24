@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,39 +9,103 @@
 #include <unistd.h>
 #include <signal.h>
 #include <setjmp.h>
+#include "oss.h"
 
-#define SHMKEY 	123456
-#define BUFF_SIZE sizeof(int)
+// incrementing the clock by 10000 (you can vary this number for testing in order to speed or slow down your clock).
+#define CLOCK_INCREMENT 10000
 
-struct Clock{
-    int seconds;
-    int nanoseconds;
-    long totaltimecomsumed;
-};
+
+static FILE *fn = NULL;
+
+static int shmid = 0;
+static int* shared_memory; // clock
+static int shmid_array = 0;
+static int* shared_memory_array;
+
+static int maxchildren;
+static int pnumber = 0;	// The start of numbers to be tested for primality
+static int incrementnumber = 0;	// Increment between the numbers we test
+
+static void outputSummary() 
+{
+    int* prime_array = shared_memory_array;
+    // Lastly, it should display a list of the numbers
+    // that it determined were prime and the numbers that it determined were not prime, followed by a list of numbers
+    // that it did not have the time to make a determination.
+    int printHeader = 1;
+    int i;
+    for (i=0;i<maxchildren; i++) {
+      if (prime_array[i] > 0) {
+        if (printHeader) { 
+         printHeader = 0;
+         fprintf(fn, "The prime numbers are: \n");
+        }
+        fprintf(fn,"%d ", prime_array[i]); 
+     }
+    }
+    printHeader = 1;
+    for (i=0;i<maxchildren; i++) {
+      if (prime_array[i] != -1 && prime_array[i] < 0) {
+        if (printHeader) { 
+         printHeader = 0;
+         fprintf(fn, "\nnon prime numbers are: \n");
+        }
+        fprintf(fn,"%d ", prime_array[i]); 
+     }
+    }
+    printHeader = 1;
+    for (i=0;i<maxchildren; i++) {
+      if (prime_array[i] == -1 || prime_array[i] ==0 ) {
+        if (printHeader) { 
+         printHeader = 0;
+         fprintf(fn, "\ndid not have the time to make a determination  numbers are: \n");
+        }
+        fprintf(fn,"%d ", pnumber+(i*incrementnumber));
+      }
+    }
+  // No matter how it terminated, oss should also output the value of the shared clock to the output file.
+  fprintf(fn, "\nfinished at time %d seconds %d nanoseconds \n",  shared_memory[0],  shared_memory[1]);
+  fclose(fn);
+}
+
+/* remove shared mem and exit */
+void removeShmAndExit()
+{
+  /* Detach the shared memory segment.  */ 
+  shmdt (shared_memory); 
+  shmdt (shared_memory_array); 
+
+  /* Deallocate the shared memory segment.  */ 
+  shmctl (shmid, IPC_RMID, 0); 
+  shmctl (shmid_array, IPC_RMID, 0); 
+  kill(-1*getpid(), SIGKILL) ; // should kill oss process and any child user processes.
+  exit(0); // this is unnecessary
+}
+
 /*Function handles ctrl c signal */
-void ctrlCHandler(){
+void ctrlCHandler(int signum){
     char errorArr[200];
     snprintf(errorArr, 200, "\n\nCTRL+C signal caught, killing all processes and releasing shared memory.");
     perror(errorArr);
-    exit(0);
-
+   outputSummary();
+   removeShmAndExit();
 }
 
 /*Function handles timer alarm signal */
-void timerHandler(){
+void timerHandler(int signum){
     char errorArr[200];
     snprintf(errorArr, 200, "\n\ntimer interrupt triggered, killing all processes and releasing shared memory.");
     perror(errorArr);
-    exit(0);
-
-
+    outputSummary();
+    removeShmAndExit();
 }
+
 int main(int argc, char* argv[]){
     int options= 0;		// Placeholder for arguments
-    int maxchilderns = 4;	// Max total number of child processes oss wil create.
+    maxchildren = 4;	// Max total number of child processes oss wil create.
     int noofchilds = 2;	// The number of children processes that can exists at any given time.
-    int pnumber = 0;	// The start of numbers to be tested for primality
-    int incrementnumber = 0;	// Increment between the numbers we test
+    pnumber = 0;	// The start of numbers to be tested for primality
+    incrementnumber = 0;	// Increment between the numbers we test
     char outputfile[255] = "output.log";	// Output file
 
 
@@ -57,7 +120,7 @@ int main(int argc, char* argv[]){
                 printf("-o filename Output file\n");
                 return EXIT_SUCCESS;
             case 'n':
-                maxchilderns = atoi(optarg);
+                maxchildren = atoi(optarg);
                 break;
             case 's':
                 noofchilds = atoi(optarg);
@@ -77,17 +140,17 @@ int main(int argc, char* argv[]){
     }
     // array to store increments for prime numbers
     int i;
-    int primenumberarray[maxchilderns];
+    int primenumberarray[maxchildren];
     primenumberarray[0] = pnumber;
-    for(i = 1; i < maxchilderns; i++){
+    for(i = 1; i < maxchildren; i++){
         primenumberarray[i] = primenumberarray[i - 1] + incrementnumber;
     }
 
     // arrays for primes
-    int primes[maxchilderns];
+    int primes[maxchildren];
     int pcount = 0;
     //array for non prime numbers
-    int noprimes[maxchilderns];
+    int noprimes[maxchildren];
     int npcount = 0;
 
     // attributes for the fork loop
@@ -97,8 +160,13 @@ int main(int argc, char* argv[]){
     pid_t pid;
     int status;
 
+    int id2pid[maxchildren]; // array to store id 2 pid mapping
+    for(i = 1; i < maxchildren; i++){
+        id2pid[i] = 0;
+    }
+
     // file operations starts
-    FILE *fn = fopen(outputfile, "w");
+    fn = fopen(outputfile, "w");
     if(!fn){
         perror("ERROR, could not open file\n");
         return(1);
@@ -110,27 +178,85 @@ int main(int argc, char* argv[]){
     timer.nanoseconds = 0;
 
     // Shared Memory variables and error handeling
-    int shmid = shmget(SHMKEY, BUFF_SIZE, 0777 | IPC_CREAT);
+ 
+    key_t shmKEYClock = ftok("./oss", 116);
+    key_t shmKEYArray = ftok("./user", 116);
+
+    int shmid = shmget(shmKEYClock, BUFF_SIZE, 0666 | IPC_CREAT);
     if(shmid == -1){
         perror("ERROR in Parent for shmget\n");
         exit(1);
     }
 
-    char* paddress = (char*)(shmat(shmid, 0, 0));
+    int* paddress = (int*)(shmat(shmid, 0, 0));
     int* ptime = (int*)(paddress);
+    shared_memory = paddress; // share in static variable so it can be detached from
+
+    // create shared memory array using child (user) will inform if a number is prime or not
+    int shmid_array = shmget(shmKEYArray, ARRAY_BUFF_SIZE, IPC_CREAT|0666);
+    if(shmid_array == -1){
+        perror("ERROR in Parent shared memory array");
+        exit(0);
+    }
+    int *prime_array = (int*)(shmat(shmid_array, 0, 0));
+    shared_memory_array = prime_array; // save it so it can be detached later on
+    // initialize to 0
+    for (i=0;i<maxchildren; i++) {
+      prime_array[i] = 0;
+    }
+    //
 
 
+    /*Catch ctrl+c signal and handle with ctrlChandler*/
+    signal(SIGINT, ctrlCHandler);
 
-    while(childfinish <= maxchilderns && exitcount < maxchilderns){
+    /*Catch alarm handle with timer Handler*/
+    signal (SIGALRM, timerHandler);
+
+    alarm( 2 ); // set timeout of 2 seconds.
+
+
+    while(childfinish <= maxchildren && exitcount < maxchildren){
         int j=1;
-        *ptime = timer.totaltimecomsumed;
-        timer.nanoseconds += 1;
-        timer.totaltimecomsumed += 1;
+        // incrementing the clock by 10000
+        timer.nanoseconds += CLOCK_INCREMENT;
         if(timer.nanoseconds > 1000000000){
             timer.seconds++;
-            timer.nanoseconds = 1000000000 - timer.nanoseconds;
+            timer.nanoseconds = 0;
         }
-        if(childfinish < maxchilderns && activechild < noofchilds){
+        ptime[0] = timer.seconds;
+        ptime[1] = timer.nanoseconds;
+        timer.totaltimeconsumed += CLOCK_INCREMENT;
+        //
+        // It should then see if any of the child processes
+        // have terminated. If any of the child processes have terminated. If so, it should first check to see the result of that
+        // child process (which it can look for in the shared memory array) and print the results to the log file.
+        //
+        if((pid = waitpid((pid_t)-1, &status, WNOHANG)) > 0){
+            if(WIFEXITED(status)){
+                int exitStatus = WEXITSTATUS(status);
+                // map pid to id
+                int id=-1;
+                for (int i=0; i<childfinish; i++) {
+                  if (id2pid[i] == pid) {
+                    id = i;
+                    break;
+                  }
+                }
+                fprintf(fn, "Child with PID:%d , Child:%d has exited after %d seconds and %d nanoseconds.\n",pid, id, timer.seconds, timer.nanoseconds);
+                if(exitStatus == 0){
+                    primes[pcount] = prime_array[id];
+                    pcount++;
+                }else if(exitStatus == 1){
+                    noprimes[npcount] = -1*prime_array[id];
+                    npcount++;
+                }
+                activechild--;
+                exitcount++;
+            }
+        }
+        // It should then fork and exec off another child if we have not exceeded the maximum number of child processes to launch.
+        if(childfinish < maxchildren && activechild < noofchilds){
             pid = fork();
             if(pid < 0){
                 perror("fork failed\n");
@@ -138,57 +264,24 @@ int main(int argc, char* argv[]){
                 exit(0);
             }
             else if(pid == 0){
+                char convertid[15];
                 char convertednumber[15];
-                char convertpid[15];
+                sprintf(convertid, "%d", childfinish+1);
                 sprintf(convertednumber, "%d", primenumberarray[childfinish]);
-                sprintf(convertpid, "%d", getpid());
-                char *args[] = {"./user", convertednumber, convertpid, NULL};
+                char *args[] = {"./user", convertid, convertednumber, NULL};
                 execvp(args[0], args);
-
-
             }
-            fprintf(fn, "Child with PID %d and number %d has launched at time %d seconds and %d nanoseconds\n" ,pid, primenumberarray[childfinish], timer.seconds, timer.nanoseconds);
+            id2pid[childfinish] = pid;
+            fprintf(fn, "Child with PID %d, Child %d and number %d has launched at time %d seconds and %d nanoseconds\n" ,pid, childfinish, primenumberarray[childfinish], timer.seconds, timer.nanoseconds);
             childfinish++;
             activechild++;
         }
-        if((pid = waitpid((pid_t)-1, &status, WNOHANG)) > 0){
-            if(WIFEXITED(status)){
-                int exitStatus = WEXITSTATUS(status);
-                fprintf(fn, "Child with PID:%d has been terminated after %d seconds and %d nanoseconds\n",pid, timer.seconds, timer.nanoseconds);
-                if(exitStatus == 0){
-                    primes[pcount] = primenumberarray[exitcount];
-                    pcount++;
-                }else if(exitStatus == 1){
-                    noprimes[npcount] = primenumberarray[exitcount];
-                    npcount++;
-                }
-                activechild--;
-                exitcount++;
-            }
-        }
     }
-    fprintf(fn, "The prime numbers are: \n");
-    for(i = 0; i < pcount; i++){
-        fprintf(fn, "%d ", primes[i]);
-    }
-    fprintf(fn, "\nnon prime numbers are: \n");
-    for(i = 0; i < npcount; i++){
-        fprintf(fn, "%d ", -noprimes[i]);
-    }
-    fprintf(fn, "\nfinished at time %f seconds \n",  timer.nanoseconds/1000000000.0);
-
-    fclose(fn);
-    /*Catch ctrl+c signal and handle with
-    *      * ctrlChandler*/
-    signal(SIGINT, ctrlCHandler);
-
-    /*Catch alarm handle with timer Handler*/
-    signal (SIGALRM, timerHandler);
-
+    outputSummary();
+/*
     jmp_buf ctrlCjmp;
     jmp_buf timerjmp;
-    /*Jump back to main enviroment where children are launched
-*      * but before the wait*/
+    //Jump back to main enviroment where children are launched but before the wait
     if(setjmp(ctrlCjmp) == 1){
         kill(pid, SIGKILL);
     }
@@ -196,6 +289,15 @@ int main(int argc, char* argv[]){
     if(setjmp(timerjmp) == 1){
         kill(pid, SIGKILL);
     }
+*/
 
-    return 0;
+  /* Detach the shared memory segment.  */ 
+  shmdt (shared_memory); 
+  shmdt (shared_memory_array); 
+
+  /* Deallocate the shared memory segment.  */ 
+  shmctl (shmid, IPC_RMID, 0); 
+  shmctl (shmid_array, IPC_RMID, 0); 
+
+  return 0;
 }
